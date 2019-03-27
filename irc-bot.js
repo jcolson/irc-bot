@@ -57,9 +57,32 @@ console.debug(config);
 let bot = new Irc(config);
 
 bot.onChannelJoined = function(e){
-  this.sendMessage({ to: e.channel, message: 'Hello I am a bot' });
+  // this.sendMessage({ to: e.channel, message: 'Hello I am ' + nick });
+  console.debug('Channel joined: ' + e.channel);
 };
 
+bot.onData = function(e){ console.debug('DEBUG: ' + e.data); };
+
 bot.onPrivmsg = function(e){
-  if (!e.toChannel) e.reply('Hello!');
+  if (!e.toChannel) {
+    e.reply('Hello to you!');
+  } else {
+    handleCommands(e);
+  }
 };
+
+function handleCommands(e) {
+  console.log(e);
+  if (e.message.substring(0, 1) === '!') {
+    let command = e.message.substring(1).toUpperCase();
+    console.log('command found: ' + command);
+    switch (command) {
+      case 'HELP':
+        console.log('help command found');
+        e.reply('HELP information:');
+        e.reply('HELP -> this menu');
+        e.reply('SOMETHING NEW -> don\'t know yet');
+        break;
+    }
+  }
+}
