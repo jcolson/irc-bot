@@ -1,0 +1,19 @@
+{
+  "name": "irc-bot",
+  "version": "1.0.0",
+  "description": "A irc bot",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:jcolson/irc-bot.git"
+  },
+  "scripts": {
+    "pretest": "eslint --ignore-path .gitignore .",
+    "test": "ava tests/"
+  },
+  "dependencies": {
+    "dotenv": "^7.0.0",
+    "node-getopt": "^0.3.2",
+    "simple-irc": "file:../../opensource/simple-irc"
+  }
+}
