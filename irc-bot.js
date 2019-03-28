@@ -3,6 +3,7 @@
 const Irc = require('simple-irc');
 const dotenv = require('dotenv');
 const path = require('path');
+const Parser = require('rss-parser');
 
 const DEFAULT_SERVER = 'irc.snoonet.org';
 const DEFAULT_PORT = '6697';
@@ -11,6 +12,8 @@ const DEFAULT_USERNAME = 'irc_username';
 const DEFAULT_PASSWORD = 'secret';
 const DEFAULT_CHANNEL = '#cancer';
 const DEFAULT_SECURE = true;
+const DEFAULT_RSS = 'https://news.google.com/rss/search?q=pancreatic+cancer';
+const DEFAULT_RSS_INT = 3600000;
 
 const opt = require('node-getopt').create([
   [ 'h', 'help',            'Show this help' ],
@@ -20,7 +23,9 @@ const opt = require('node-getopt').create([
   [ 'u', 'username={irc username}',   'User name to use on irc (default: ' + DEFAULT_USERNAME + ')' ],
   [ 'p', 'password={irc passworf}',   'Password to use on irc (default: ' + DEFAULT_PASSWORD + ')' ],
   [ 'c', 'channel={irc channel}',   'Channel to join on irc (default: ' + DEFAULT_CHANNEL + ')' ],
-  [ 's', 'secure={boolean}',   'Use TLS for irc (default: ' + DEFAULT_SECURE + ')' ],
+  [ 'c', 'secure={boolean}',   'Use TLS for irc (default: ' + DEFAULT_SECURE + ')' ],
+  [ 'r', 'rss={url}',   'RSS url used for bot (default: ' + DEFAULT_RSS + ')' ],
+  [ 'i', 'rssint={url}',   'RSS url used for bot (default: ' + DEFAULT_RSS_INT + ')' ],
 ]).bindHelp().parseSystem();
 // load .env file
 dotenv.config({ path: path.resolve(__dirname, '.env') });
@@ -33,6 +38,8 @@ let authType = Irc().authType.saslPlain;
 let username = opt.options.username || process.env.USERNAME || DEFAULT_USERNAME;
 let password = opt.options.password || process.env.PASSWORD || DEFAULT_PASSWORD;
 let channel = opt.options.channel || process.env.CHANNEL || DEFAULT_CHANNEL;
+let rss = opt.options.rss || process.env.RSS || DEFAULT_RSS;
+let rssint = opt.options.rss || process.env.RSS_INT || DEFAULT_RSS_INT;
 let config = {
   server: {
     address: server,
@@ -71,6 +78,25 @@ bot.onPrivmsg = function(e){
   }
 };
 
+setInterval(() => {
+  doRss();
+}, rssint);
+
+function doRss() {
+  console.log('doing rss work ...');
+  let parser = new Parser();
+  (async() => {
+
+    let feed = await parser.parseURL(rss);
+    console.log(feed.title);
+    if (feed.items[0]) {
+      console.log(feed.items[0].title + ':' + feed.items[0].link);
+      let message = {to: '#cancer', message: feed.items[0].title + ': ' + feed.items[0].link};
+      bot.sendMessage(message);
+    }
+  })();
+}
+
 function handleCommands(e) {
   console.log(e);
   if (e.message.substring(0, 1) === '!') {
@@ -81,7 +107,6 @@ function handleCommands(e) {
         console.log('help command found');
         e.reply('HELP information:');
         e.reply('HELP -> this menu');
-        e.reply('SOMETHING NEW -> don\'t know yet');
         break;
     }
   }
