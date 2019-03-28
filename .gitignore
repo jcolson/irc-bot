@@ -1,3 +1,4 @@
 /.idea/
 /node_modules/
 .env
+irc-bot-database.json
