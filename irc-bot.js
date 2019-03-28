@@ -4,6 +4,8 @@ const Irc = require('simple-irc');
 const dotenv = require('dotenv');
 const path = require('path');
 const Parser = require('rss-parser');
+const fs = require('fs');
+const _DATABASE = 'irc-bot-database.json';
 
 const DEFAULT_SERVER = 'irc.snoonet.org';
 const DEFAULT_PORT = '6697';
@@ -12,7 +14,7 @@ const DEFAULT_USERNAME = 'irc_username';
 const DEFAULT_PASSWORD = 'secret';
 const DEFAULT_CHANNEL = '#cancer';
 const DEFAULT_SECURE = true;
-const DEFAULT_RSS = 'https://news.google.com/rss/search?q=pancreatic+cancer';
+const DEFAULT_RSS = 'https://news.google.com/rss/search?q=pancreatic+cancer+when:7d';
 const DEFAULT_RSS_INT = 3600000;
 
 const opt = require('node-getopt').create([
@@ -59,55 +61,118 @@ let config = {
   ],
 };
 
-console.debug(config);
+// console.debug(config);
+console.debug(rssint);
+console.debug(rss);
 
 let bot = new Irc(config);
+let databaseJson = {};
 
 bot.onChannelJoined = function(e){
   // this.sendMessage({ to: e.channel, message: 'Hello I am ' + nick });
   console.debug('Channel joined: ' + e.channel);
 };
 
-bot.onData = function(e){ console.debug('DEBUG: ' + e.data); };
+// bot.onData = function(e){ console.debug('DEBUG: ' + e.data); };
 
 bot.onPrivmsg = function(e){
   if (!e.toChannel) {
     e.reply('Hello to you!');
+    handleCommands(e);
   } else {
     handleCommands(e);
   }
 };
 
-setInterval(() => {
-  doRss();
-}, rssint);
-
-function doRss() {
-  console.log('doing rss work ...');
-  let parser = new Parser();
-  (async() => {
-
-    let feed = await parser.parseURL(rss);
-    console.log(feed.title);
-    if (feed.items[0]) {
-      console.log(feed.items[0].title + ':' + feed.items[0].link);
+setInterval(async() => {
+  let feed = await getRssFeed();
+  // console.log(feed);
+  if (feed.items[0]) {
+    console.log(feed.items[0].title + ':' + feed.items[0].link);
+    if (!feed.items[0].guid === databaseJson.rss.lastRssGuid) {
+      databaseJson.rss.lastRssGuid = feed.items[0].guid;
       let message = {to: '#cancer', message: feed.items[0].title + ': ' + feed.items[0].link};
       bot.sendMessage(message);
+    } else {
+      console.log('already spewed this rss, will be quiet for now');
     }
-  })();
+  }
+}, rssint);
+
+readDB();
+
+process.on('SIGTERM', async() => {
+  console.log('Caught termination signal');
+  await persistDB();
+  process.exit();
+});
+process.on('SIGINT', async() => {
+  console.log('Caught interrupt signal');
+  await persistDB();
+  process.exit();
+});
+process.on('exit', async() => {
+  console.log('Caught exit signal');
+  await persistDB();
+  process.exit();
+});
+process.on('SIGUSR1', async() => {
+  console.log('Caught exit signal');
+  await persistDB();
+  process.exit();
+});
+process.on('SIGUSR2', async() => {
+  console.log('Caught exit signal');
+  await persistDB();
+  process.exit();
+});
+
+function getRssFeed() {
+  console.log('retrieving RSS: ' + rss);
+  let parser = new Parser();
+  return new Promise((resolve, reject) => {
+    resolve(parser.parseURL(rss));
+  });
 }
 
-function handleCommands(e) {
+async function handleCommands(e) {
   console.log(e);
   if (e.message.substring(0, 1) === '!') {
     let command = e.message.substring(1).toUpperCase();
     console.log('command found: ' + command);
     switch (command) {
       case 'HELP':
-        console.log('help command found');
+        console.log('help command issued');
         e.reply('HELP information:');
         e.reply('HELP -> this menu');
+        e.reply('RSS -> pull the current RSS entry from google');
+        break;
+      case 'RSS':
+        console.log('RSS command issued');
+        let feed = await getRssFeed();
+        for (var i = 0; i < (feed.items.length < 5 ? feed.items.length : 5); i++) {
+          e.reply(feed.items[i].title + ': ' + feed.items[i].link);
+        }
         break;
     }
+  }
+}
+function persistDB() {
+  fs.writeFileSync(path.resolve(__dirname, _DATABASE), JSON.stringify(databaseJson), 'utf8');
+  console.log('wrote database json');
+}
+function readDB() {
+  try {
+    databaseJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, _DATABASE), 'utf8'));
+  } catch (e) {
+    console.error('Caught exception loading database, initializing.', e);
+    initializDB();
+  }
+  console.log('read database json');
+}
+function initializDB() {
+  if (!databaseJson.rss) {
+    console.log('populating empty rss for first time');
+    databaseJson.rss = {};
   }
 }
