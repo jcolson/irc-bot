@@ -41,7 +41,7 @@ let authType = Irc().authType.saslPlain;
 let username = opt.options.username || process.env.USERNAME || DEFAULT_USERNAME;
 let password = opt.options.password || process.env.PASSWORD || DEFAULT_PASSWORD;
 let channel = opt.options.channel || process.env.CHANNEL || DEFAULT_CHANNEL;
-let rss = opt.options.rss || process.env.RSS.split(',') || DEFAULT_RSS;
+let rss = opt.options.rss || process.env.RSS ? process.env.RSS.split(',') : undefined || DEFAULT_RSS;
 let rssint = opt.options.rss || process.env.RSS_INT || DEFAULT_RSS_INT;
 let config = {
   server: {
