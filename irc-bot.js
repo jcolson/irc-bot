@@ -14,7 +14,8 @@ const DEFAULT_USERNAME = 'irc_username';
 const DEFAULT_PASSWORD = 'secret';
 const DEFAULT_CHANNEL = '#cancer';
 const DEFAULT_SECURE = true;
-const DEFAULT_RSS = 'https://news.google.com/rss/search?q=pancreatic+cancer+when:7d';
+const DEFAULT_RSS = ['https://news.google.com/rss/search?q=pancreatic+cancer+when:7d',
+  'https://www.reddit.com/r/cancer/new/.rss?sort=new'];
 const DEFAULT_RSS_INT = 3600000;
 
 const opt = require('node-getopt').create([
@@ -31,7 +32,7 @@ const opt = require('node-getopt').create([
 ]).bindHelp().parseSystem();
 // load .env file
 dotenv.config({ path: path.resolve(__dirname, '.env') });
-console.debug('post dotenv');
+
 let server = opt.options.server || process.env.SERVER || DEFAULT_SERVER;
 let secure = opt.options.secure || process.env.SECURE || DEFAULT_SECURE;
 let port = opt.options.port || process.env.PORT || DEFAULT_PORT;
@@ -40,7 +41,7 @@ let authType = Irc().authType.saslPlain;
 let username = opt.options.username || process.env.USERNAME || DEFAULT_USERNAME;
 let password = opt.options.password || process.env.PASSWORD || DEFAULT_PASSWORD;
 let channel = opt.options.channel || process.env.CHANNEL || DEFAULT_CHANNEL;
-let rss = opt.options.rss || process.env.RSS || DEFAULT_RSS;
+let rss = opt.options.rss || process.env.RSS.split(',') || DEFAULT_RSS;
 let rssint = opt.options.rss || process.env.RSS_INT || DEFAULT_RSS_INT;
 let config = {
   server: {
@@ -85,16 +86,29 @@ bot.onPrivmsg = function(e){
 };
 
 setInterval(async() => {
-  let feed = await getRssFeed();
-  // console.log(feed);
-  if (feed.items[0]) {
-    console.log(feed.items[0].title + ':' + feed.items[0].link);
-    if (!feed.items[0].guid === databaseJson.rss.lastRssGuid) {
-      databaseJson.rss.lastRssGuid = feed.items[0].guid;
-      let message = {to: '#cancer', message: feed.items[0].title + ': ' + feed.items[0].link};
-      bot.sendMessage(message);
-    } else {
-      console.log('already spewed this rss, will be quiet for now');
+  for (let url of rss) {
+    let feed = await getRssFeed(url);
+    // console.log(feed);
+    if (feed.items[0]) {
+      console.log(feed.items[0].title + ':' + feed.items[0].link);
+      if (!databaseJson.rss[url]) {
+        databaseJson.rss[url] = {};
+      }
+      console.log('lastrssguid: ' + databaseJson.rss[url].lastRssGuid);
+      let rssGuid;
+      if (feed.items[0].guid) {
+        rssGuid = feed.items[0].guid;
+      } else {
+        rssGuid = feed.items[0].id;
+      }
+      console.log('current rss guid: ' + rssGuid);
+      if (rssGuid !== databaseJson.rss[url].lastRssGuid) {
+        databaseJson.rss[url].lastRssGuid = rssGuid;
+        let message = {to: '#cancer', message: feed.items[0].title + ': ' + feed.items[0].link};
+        bot.sendMessage(message);
+      } else {
+        console.log('already spewed this rss, will be quiet for now');
+      }
     }
   }
 }, rssint);
@@ -127,11 +141,11 @@ process.on('SIGUSR2', async() => {
   process.exit();
 });
 
-function getRssFeed() {
-  console.log('retrieving RSS: ' + rss);
+function getRssFeed(url) {
+  console.log('retrieving RSS: ' + url);
   let parser = new Parser();
   return new Promise((resolve, reject) => {
-    resolve(parser.parseURL(rss));
+    resolve(parser.parseURL(url));
   });
 }
 
@@ -145,13 +159,15 @@ async function handleCommands(e) {
         console.log('help command issued');
         e.reply('HELP information:');
         e.reply('HELP -> this menu');
-        e.reply('RSS -> pull the current RSS entry from google');
+        e.reply('RSS -> pull the current RSS entries');
         break;
       case 'RSS':
         console.log('RSS command issued');
-        let feed = await getRssFeed();
-        for (var i = 0; i < (feed.items.length < 5 ? feed.items.length : 5); i++) {
-          e.reply(feed.items[i].title + ': ' + feed.items[i].link);
+        for (let url of rss) {
+          let feed = await getRssFeed(url);
+          for (var i = 0; i < (feed.items.length < 3 ? feed.items.length : 3); i++) {
+            e.reply(feed.items[i].title + ': ' + feed.items[i].link);
+          }
         }
         break;
     }
