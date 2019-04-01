@@ -68,7 +68,6 @@ console.debug(rss);
 
 let bot = new Irc(config);
 let databaseJson = {};
-
 bot.onChannelJoined = function(e){
   // this.sendMessage({ to: e.channel, message: 'Hello I am ' + nick });
   console.debug('Channel joined: ' + e.channel);
@@ -102,8 +101,14 @@ setInterval(async() => {
         rssGuid = feed.items[0].id;
       }
       console.log('current rss guid: ' + rssGuid);
-      if (rssGuid !== databaseJson.rss[url].lastRssGuid) {
-        databaseJson.rss[url].lastRssGuid = rssGuid;
+      if (!Array.isArray(databaseJson.rss[url].lastRssGuid)) {
+        databaseJson.rss[url].lastRssGuid = [];
+      }
+      if (!databaseJson.rss[url].lastRssGuid.includes(rssGuid)) {
+        databaseJson.rss[url].lastRssGuid.push(rssGuid);
+        if (databaseJson.rss[url].lastRssGuid.length > 4) {
+          databaseJson.rss[url].lastRssGuid.pop();
+        }
         let message = {to: '#cancer', message: feed.items[0].title + ': ' + feed.items[0].link};
         bot.sendMessage(message);
       } else {
