@@ -24,7 +24,7 @@ const opt = require('node-getopt').create([
   [ 'p', 'port={server port}',   'Port number to connect (default: ' + DEFAULT_PORT + ')' ],
   [ 'n', 'nick={irc nickname}',   'Nick name to use on irc (default: ' + DEFAULT_NICK + ')' ],
   [ 'u', 'username={irc username}',   'User name to use on irc (default: ' + DEFAULT_USERNAME + ')' ],
-  [ 'p', 'password={irc passworf}',   'Password to use on irc (default: ' + DEFAULT_PASSWORD + ')' ],
+  [ 'p', 'password={irc password}',   'Password to use on irc (default: ' + DEFAULT_PASSWORD + ')' ],
   [ 'c', 'channel={irc channel}',   'Channel to join on irc (default: ' + DEFAULT_CHANNEL + ')' ],
   [ 'c', 'secure={boolean}',   'Use TLS for irc (default: ' + DEFAULT_SECURE + ')' ],
   [ 'r', 'rss={url}',   'RSS url used for bot (default: ' + DEFAULT_RSS + ')' ],
@@ -94,12 +94,7 @@ setInterval(async() => {
         databaseJson.rss[url] = {};
       }
       console.log('lastrssguid: ' + databaseJson.rss[url].lastRssGuid);
-      let rssGuid;
-      if (feed.items[0].guid) {
-        rssGuid = feed.items[0].guid;
-      } else {
-        rssGuid = feed.items[0].id;
-      }
+      let rssGuid = feed.items[0].link;
       console.log('current rss guid: ' + rssGuid);
       if (!Array.isArray(databaseJson.rss[url].lastRssGuid)) {
         databaseJson.rss[url].lastRssGuid = [];
