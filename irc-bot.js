@@ -100,8 +100,8 @@ setInterval(async() => {
         databaseJson.rss[url].lastRssGuid = [];
       }
       if (!databaseJson.rss[url].lastRssGuid.includes(rssGuid)) {
-        databaseJson.rss[url].lastRssGuid.push(rssGuid);
-        if (databaseJson.rss[url].lastRssGuid.length > 4) {
+        databaseJson.rss[url].lastRssGuid.unshift(rssGuid);
+        if (databaseJson.rss[url].lastRssGuid.length > 10) {
           databaseJson.rss[url].lastRssGuid.pop();
         }
         let message = {to: '#cancer', message: feed.items[0].title + ': ' + feed.items[0].link};
