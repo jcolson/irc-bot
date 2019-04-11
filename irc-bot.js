@@ -226,11 +226,12 @@ function handleSed(messageData) {
     // This is a sed replace command, look for target message from the history in reverse.
     if (typeof history[messageData.to] !== undefined) {
       for (var i = history[messageData.to].length - 1; i >= 0; i--) {
-        if (matcher.test(history[messageData.to][i].text)) {
+        console.debug('checking -> ' + history[messageData.to][i].message);
+        if (matcher.test(history[messageData.to][i].message)) {
           // Matching message found, send the replacement and exit.
           // Fallback user, in case someone new joined. Should not occur ...
-          var sender = history[messageData.from];
-          var newText = 'Correction, *' + sender + '* ...\n' + history[messageData.to][i].text.replace(matcher, ' *' + sedMatch[3] + '* ');
+          var sender = history[messageData.to][i].from;
+          var newText = 'Correction, *' + sender + '* ...' + history[messageData.to][i].message.replace(matcher, ' *' + sedMatch[3] + '* ');
           console.debug('about to send reply');
           messageData.reply(newText);
           //          self.respond(messageData.to, newText, wsc);
