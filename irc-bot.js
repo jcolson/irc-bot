@@ -17,6 +17,8 @@ const DEFAULT_SECURE = true;
 const DEFAULT_RSS = ['https://news.google.com/rss/search?q=pancreatic+cancer+when:7d',
   'https://www.reddit.com/r/cancer/new/.rss?sort=new'];
 const DEFAULT_RSS_INT = 3600000;
+const sedRegex = /(?:^|\s)s([^\w\s])([\-\(\)\*\[\]\s\w]+)\1([\-\(\)\*\[\]\s\w]+)\1?([\-\(\)\*\[\]\w]+)*/;
+const keepHistory = 20;
 
 const opt = require('node-getopt').create([
   [ 'h', 'help',            'Show this help' ],
@@ -33,6 +35,7 @@ const opt = require('node-getopt').create([
 // load .env file
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
+let history = {};
 let server = opt.options.server || process.env.SERVER || DEFAULT_SERVER;
 let secure = opt.options.secure || process.env.SECURE || DEFAULT_SECURE;
 let port = opt.options.port || process.env.PORT || DEFAULT_PORT;
@@ -171,6 +174,8 @@ async function handleCommands(e) {
         }
         break;
     }
+  } else {
+    handleSed(e);
   }
 }
 function persistDB() {
@@ -190,5 +195,50 @@ function initializDB() {
   if (!databaseJson.rss) {
     console.log('populating empty rss for first time');
     databaseJson.rss = {};
+  }
+}
+function handleSed(messageData) {
+  console.debug('in handlesed');
+  var sedMatch = messageData.message.match(sedRegex);
+  if (sedMatch === null) {
+    // Don't save replacement commands (messages) to history.
+    if (typeof history[messageData.to] === 'undefined') {
+      history[messageData.to] = [];
+    }
+    history[messageData.to].push(messageData);
+    if (history[messageData.to].length > keepHistory) {
+      history[messageData.to].shift();
+    }
+    console.debug('no sedmatch returning');
+    return;
+  }
+
+  // Check if the command can be compiled.
+  try {
+    var matcher = new RegExp(sedMatch[2], sedMatch[4]);
+    console.debug('is a valid regex');
+  } catch (e) {
+    console.log('not a valid regex: ' + sedMatch[2] + ' ' + sedMatch[4]);
+    // Not a valid regular expression.
+    return;
+  }
+  try {
+    // This is a sed replace command, look for target message from the history in reverse.
+    if (typeof history[messageData.to] !== undefined) {
+      for (var i = history[messageData.to].length - 1; i >= 0; i--) {
+        if (matcher.test(history[messageData.to][i].text)) {
+          // Matching message found, send the replacement and exit.
+          // Fallback user, in case someone new joined. Should not occur ...
+          var sender = history[messageData.from];
+          var newText = 'Correction, *' + sender + '* ...\n' + history[messageData.to][i].text.replace(matcher, ' *' + sedMatch[3] + '* ');
+          console.debug('about to send reply');
+          messageData.reply(newText);
+          //          self.respond(messageData.to, newText, wsc);
+          return;
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Caught exception doing sed replace' + e);
   }
 }
