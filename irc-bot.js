@@ -13,7 +13,7 @@ const DEFAULT_NICK = 'irc_bot';
 const DEFAULT_USERNAME = 'irc_username';
 const DEFAULT_PASSWORD = 'secret';
 const DEFAULT_CHANNEL = '#cancer';
-const DEFAULT_SECURE = true;
+const DEFAULT_TLS = true;
 const DEFAULT_RSS = ['https://news.google.com/rss/search?q=pancreatic+cancer+when:7d',
   'https://www.reddit.com/r/cancer/new/.rss?sort=new'];
 const DEFAULT_RSS_INT = 3600000;
@@ -28,7 +28,9 @@ const opt = require('node-getopt').create([
   [ 'u', 'username={irc username}',   'User name to use on irc (default: ' + DEFAULT_USERNAME + ')' ],
   [ 'p', 'password={irc password}',   'Password to use on irc (default: ' + DEFAULT_PASSWORD + ')' ],
   [ 'c', 'channel={irc channel}',   'Channel to join on irc (default: ' + DEFAULT_CHANNEL + ')' ],
-  [ 'c', 'secure={boolean}',   'Use TLS for irc (default: ' + DEFAULT_SECURE + ')' ],
+  [ 'k', 'key={channel key}',   'Channel key' ],
+  [ 'b', 'blowfish={channel key}',   'Blofish encryption key' ],
+  [ 't', 'tls={boolean}',   'Use TLS for irc (default: ' + DEFAULT_TLS + ')' ],
   [ 'r', 'rss={url}',   'RSS url used for bot (default: ' + DEFAULT_RSS + ')' ],
   [ 'i', 'rssint={url}',   'RSS url used for bot (default: ' + DEFAULT_RSS_INT + ')' ],
 ]).bindHelp().parseSystem();
@@ -37,13 +39,15 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 let history = {};
 let server = opt.options.server || process.env.SERVER || DEFAULT_SERVER;
-let secure = opt.options.secure || process.env.SECURE || DEFAULT_SECURE;
+let secure = opt.options.tls || process.env.TLS || DEFAULT_TLS;
 let port = opt.options.port || process.env.PORT || DEFAULT_PORT;
 let nick = opt.options.nick || process.env.NICK || DEFAULT_NICK;
 let authType = Irc().authType.saslPlain;
 let username = opt.options.username || process.env.USERNAME || DEFAULT_USERNAME;
 let password = opt.options.password || process.env.PASSWORD || DEFAULT_PASSWORD;
 let channel = opt.options.channel || process.env.CHANNEL || DEFAULT_CHANNEL;
+let key = opt.options.key || process.env.KEY || '';
+let blowfish = opt.options.blowfish || process.env.BLOWFISH || '';
 let rss = opt.options.rss || process.env.RSS ? process.env.RSS.split(',') : undefined || DEFAULT_RSS;
 let rssint = opt.options.rss || process.env.RSS_INT || DEFAULT_RSS_INT;
 let config = {
@@ -61,6 +65,8 @@ let config = {
   },
   channels: [
     { name: channel,
+      key: key,
+      blowfish: blowfish,
     },
   ],
 };
