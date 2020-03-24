@@ -70,6 +70,7 @@ let config = {
   channels: [
     { name: channel,
       key: key,
+      blowfish: blowfish,
     },
   ],
 };
