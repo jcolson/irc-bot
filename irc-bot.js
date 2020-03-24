@@ -19,6 +19,7 @@ const DEFAULT_RSS = ['https://news.google.com/rss/search?q=pancreatic+cancer+whe
 const DEFAULT_RSS_INT = 3600000;
 const sedRegex = /(?:^|\s)s([^\w\s])([\-\(\)\*\[\]\s\w]+)\1([\-\(\)\*\[\]\s\w]+)\1?([\-\(\)\*\[\]\w]+)*/;
 const keepHistory = 20;
+const DEFAULT_CONFIGDIR = __dirname;
 
 const opt = require('node-getopt').create([
   [ 'h', 'help',            'Show this help' ],
@@ -34,8 +35,11 @@ const opt = require('node-getopt').create([
   [ 'r', 'rss={url}',   'RSS url used for bot (default: ' + DEFAULT_RSS + ')' ],
   [ 'i', 'rssint={url}',   'RSS url used for bot (default: ' + DEFAULT_RSS_INT + ')' ],
 ]).bindHelp().parseSystem();
+
+let configDir = process.env.CONFIGDIR || DEFAULT_CONFIGDIR;
+
 // load .env file
-dotenv.config({ path: path.resolve(__dirname, '.env') });
+dotenv.config({ path: path.resolve(configDir, '.env') });
 
 let history = {};
 let server = opt.options.server || process.env.SERVER || DEFAULT_SERVER;
@@ -66,12 +70,11 @@ let config = {
   channels: [
     { name: channel,
       key: key,
-      blowfish: blowfish,
     },
   ],
 };
 
-// console.debug(config);
+console.debug(config);
 console.debug(rssint);
 console.debug(rss);
 
@@ -185,12 +188,12 @@ async function handleCommands(e) {
   }
 }
 function persistDB() {
-  fs.writeFileSync(path.resolve(__dirname, _DATABASE), JSON.stringify(databaseJson), 'utf8');
+  fs.writeFileSync(path.resolve(configDir, _DATABASE), JSON.stringify(databaseJson), 'utf8');
   console.log('wrote database json');
 }
 function readDB() {
   try {
-    databaseJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, _DATABASE), 'utf8'));
+    databaseJson = JSON.parse(fs.readFileSync(path.resolve(configDir, _DATABASE), 'utf8'));
   } catch (e) {
     console.error('Caught exception loading database, initializing.', e);
     initializDB();
