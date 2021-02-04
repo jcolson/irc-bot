@@ -97,7 +97,8 @@ bot.onPrivmsg = function(e){
   }
 };
 
-setInterval(async() => {
+// added a variable in case we want to clearInterval at some point
+let theRssInterval = setInterval(async() => {
   for (let url of rss) {
     let feed = await getRssFeed(url);
     // console.log(feed);
