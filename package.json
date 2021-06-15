@@ -21,7 +21,7 @@
     "ava": "^3.11.1",
     "eslint": "^5.16.0",
     "eslint-config-strongloop": "^2.1.0",
-    "lodash": ">=4.17.19",
+    "lodash": ">=4.17.21",
     "lodash.merge": ">=4.6.2"
   }
 }
